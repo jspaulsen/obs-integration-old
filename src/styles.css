@@ -1,0 +1,20 @@
+.emote {
+    opacity: 0;
+    /* Syntax is animation: name duration timing-function delay iteration-count direction fill-mode; */
+    animation: fade-in 250ms ease-in forwards, fade-out 5s 1s ease-out forwards;
+  }
+  
+  @keyframes fade-in {
+    100% {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes fade-out {
+    0% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
