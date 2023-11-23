@@ -17,14 +17,14 @@ function resize_canvas(): void {
 
 function main(): void {
     const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-    
+
     // size the canvas to the window
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
     const renderer = new Renderer({
         canvas,
-        emote_lifetime_secs: 10,
+        emote_lifetime_secs: 2,
     });
 
     const manager = new ChatService({

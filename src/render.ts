@@ -10,6 +10,12 @@ interface RenderableEmote {
     created_at: number;
     position_x: number;
     position_y: number;
+
+    // direction and velocity
+    direction_x: number;
+    direction_y: number;
+    velocity_x: number;
+    velocity_y: number;
 }
 
 interface RenderServiceOptions {
@@ -26,7 +32,7 @@ class RenderService {
     emotes: RenderableEmote[] = [];
     canvas: HTMLCanvasElement;
     context: CanvasRenderingContext2D;
-    emote_lifetime_secs: number = 10000;
+    emote_lifetime_secs: number = 1000;
     emote_service: EmoteService = new EmoteService();
 
     constructor (opts: RenderServiceOptions) {
@@ -48,6 +54,13 @@ class RenderService {
             created_at: Date.now(),
             position_x: Math.random() * this.canvas.width,
             position_y: Math.random() * this.canvas.height,
+
+            // direction and velocity
+            direction_x: Math.random() > 0.5 ? 1 : -1,
+            direction_y: Math.random() > 0.5 ? 1 : -1,
+
+            velocity_x: Math.random() * 4,
+            velocity_y: Math.random() * 4,
         };
 
         this.emotes.push(renderable_emote);
@@ -77,6 +90,32 @@ class RenderService {
                 continue
             }
 
+            // move the emote
+            emote.position_x += emote.velocity_x * emote.direction_x;
+            emote.position_y += emote.velocity_y * emote.direction_y;
+
+            // bounce the emote off the walls
+            if (emote.position_x + emote.image.width > this.canvas.width) {
+                emote.direction_x = -1;
+            }
+
+            if (emote.position_x < 0) {
+                emote.direction_x = 1;
+            }
+
+            if (emote.position_y + emote.image.height > this.canvas.height) {
+                emote.direction_y = -1;
+            }
+
+            if (emote.position_y < 0) {
+                emote.direction_y = 1;
+            }
+
+            // set image opacity
+            const opacity = 1 - (Date.now() - emote.created_at) / this.emote_lifetime_secs;
+            this.context.globalAlpha = opacity;
+
+            // draw the emote
             this.context.drawImage(
                 emote.image,
                 emote.position_x,
