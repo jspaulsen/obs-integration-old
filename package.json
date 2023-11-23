@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "reload": "webpack serve --hot"
+    "reload": "webpack serve --hot",
+    "build": "webpack --mode production"
   },
   "author": "",
   "license": "ISC",
@@ -19,6 +20,7 @@
   },
   "dependencies": {
     "@types/tmi.js": "^1.8.6",
+    "gifuct-js": "^2.1.2",
     "style-loader": "^3.3.3",
     "tmi.js": "^1.8.5"
   }

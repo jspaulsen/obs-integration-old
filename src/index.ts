@@ -15,7 +15,7 @@ function resize_canvas(): void {
 }
 
 
-function main(): void {
+async function main(): Promise<void> {
     const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 
     // size the canvas to the window
@@ -24,7 +24,8 @@ function main(): void {
 
     const renderer = new Renderer({
         canvas,
-        emote_lifetime_secs: 2,
+        emote_lifetime_secs: 3,
+        user_id: '1', // TODO: get this from the twitch api
     });
 
     const manager = new ChatService({
@@ -40,7 +41,7 @@ function main(): void {
 
 /* Wait until the DOM is loaded before running the script */
 window.addEventListener('DOMContentLoaded', () => {
-    main()
+    main();
 });
 
 /* Register the resize event */

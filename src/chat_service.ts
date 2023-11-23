@@ -1,5 +1,5 @@
 import ChatClient from "./chat";
-import { Renderer, Emote } from "./render";
+import { Renderer, ChatEmote } from "./render";
 
 
 interface ChatServiceOptions {
@@ -22,7 +22,7 @@ class ChatService {
     }
 
     async on_chat_event(channel: string, tags: any, message: string): Promise<void> {
-        const emotes: Emote[] = [];
+        const emotes: ChatEmote[] = [];
         
         console.log(`[${channel}] ${tags['display-name']}: ${message}`);
         // TODO: Eventually we're going to want to check 7tv for emotes as well
@@ -32,6 +32,8 @@ class ChatService {
                 emotes.push({ id: emote_id });
             }
         }
+
+        // iterate through each word in the message and check for emotes
 
         await this.renderer.add_emotes(emotes);
     }
