@@ -23,9 +23,10 @@ module.exports = {
     path: path.resolve(__dirname, 'dist'),
   },
   devServer: {
-    static: {
-      directory: path.join(__dirname, 'dist'),
-    },
+    static: [
+      path.join(__dirname, 'public'),
+      path.join(__dirname, 'dist'),
+    ],
     compress: true,
     port: 9000,
   },

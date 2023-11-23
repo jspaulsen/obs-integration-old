@@ -1,76 +1,47 @@
-import ChatClient from "./chat";
+import ChatService from './chat_service';
+import { Renderer } from './render';
 
 import './styles.css';
 
 
-function get_emote_url(emote_id: string, theme_mode?: string, scale?: string): string {
-    const template = 'https://static-cdn.jtvnw.net/emoticons/v2/<id>/default/<theme_mode>/<scale>';
 
-    return template
-        .replace('<id>', emote_id)
-        .replace('<theme_mode>', theme_mode || 'dark')
-        .replace('<scale>', scale || '2.0');
+function resize_canvas(): void {
+    const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    canvas.width = width;
+    canvas.height = height;
 }
 
 
 function main(): void {
-    const root = document.getElementById('root');
-    const client = new ChatClient({
-        channel: 'cohhcarnage',
-        client_id: null,
+    const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+    
+    // size the canvas to the window
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-        callback: (channel, tags, message) => {
-            const div = document.createElement('div');
-            
-            // NOTE: There is a first messsage tag we could use
-
-            // div.classList.add('fade-in-out');
-            // div.innerText = `${tags.username}: ${message}`;
-
-            if (tags.emotes) {
-                // for each emote, find the image and add it
-                for (const emote_id in tags.emotes) {
-                    const emote = tags.emotes[emote_id];
-                    const emote_url = get_emote_url(emote_id);
-                    const img = document.createElement('img');
-
-                    
-                    img.src = emote_url;
-                    img.classList.add('emote');
-
-                    div.appendChild(img);
-                }
-
-                // const emote_url = get_emote_url(emote_id);
-
-                // const img = document.createElement('img');
-                // img.src = emote_url;
-                // img.classList.add('emote');
-
-                // div.prepend(img);
-            }
-
-            root.appendChild(div);
-        }
+    const renderer = new Renderer({
+        canvas,
+        emote_lifetime_secs: 10,
     });
 
-    client.connect();
+    const manager = new ChatService({
+        channel: 'cannibaljeebus',
+        renderer,
+    });
+
+    // Connect to channel
+    manager.connect();
+    renderer.render();
 }
 
-function render_loop(timestamp: number): void {
-
-}
-
-
-function loop(): void {
-    // this can be used for rendering; we probably 
-    // just need to move images at this frequecy
-    // https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame
-    // https://w3schools.com/jsref/met_win_requestanimationframe.asp
-    requestAnimationFrame(loop);
-}
 
 /* Wait until the DOM is loaded before running the script */
 window.addEventListener('DOMContentLoaded', () => {
     main()
 });
+
+/* Register the resize event */
+window.addEventListener('resize', resize_canvas, false);
