@@ -63,8 +63,6 @@ class EmoteService {
             return null;
         }
 
-        console.log(`[emote] ${emote_id} ${content_type}`)
-
         let emote = null;
 
         // if the emote is a gif, we need to parse it
@@ -83,7 +81,6 @@ class EmoteService {
             };
         }
         
-        console.log(emote)
         this.cache.set(emote_id, emote);
         return emote;
     }

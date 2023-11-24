@@ -1,8 +1,7 @@
 import ChatService from './chat_service';
-import { Renderer } from './render';
+import { RenderService } from './render';
 
 import './styles.css';
-
 
 
 function resize_canvas(): void {
@@ -22,9 +21,9 @@ async function main(): Promise<void> {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    const renderer = new Renderer({
+    const renderer = new RenderService({
         canvas,
-        emote_lifetime_secs: 3,
+        emote_lifetime_secs: 10,
         user_id: '1', // TODO: get this from the twitch api
     });
 

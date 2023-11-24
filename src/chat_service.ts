@@ -1,15 +1,15 @@
 import ChatClient from "./chat";
-import { Renderer, ChatEmote } from "./render";
+import { RenderService, ChatEmote } from "./render";
 
 
 interface ChatServiceOptions {
     client_id?: string;
     channel: string;
-    renderer: Renderer;
+    renderer: RenderService;
 }
 
 class ChatService {
-    renderer: Renderer;
+    renderer: RenderService;
     client: ChatClient;
 
     constructor({ channel, renderer }: ChatServiceOptions) {

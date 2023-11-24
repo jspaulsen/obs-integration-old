@@ -5,32 +5,31 @@ interface ChatEmote {
     id: string
 }
 
-interface BaseEmote {
-    created_at: number;
+interface RenderableOptions {
+    lifetime: number;
     position_x: number;
     position_y: number;
-
-    // direction and velocity
-    direction_x: number;
-    direction_y: number;
-    velocity_x: number;
-    velocity_y: number;
-
-    animated: boolean;
 }
 
-
-interface RenderableEmote extends BaseEmote {
-    animated: false;
+interface RenderableImageOptions extends RenderableOptions {
     image: HTMLImageElement;
 }
 
-interface AnimatedRenderableEmote extends BaseEmote {
-    animated: true;
+interface RenderableAnimatedImageOptions extends RenderableOptions {
     frames: Frame[];
-    last_frame: number; 
+    last_frame: number;
     last_rendered_at: number;
 }
+
+interface EmoteOps {
+    direction_x: number;
+    direction_y: number;
+
+    velocity: number;
+}
+
+interface RenderableEmoteOpts extends RenderableImageOptions, EmoteOps { }
+interface RenderableAnimatedEmoteOpts extends RenderableAnimatedImageOptions, EmoteOps { }
 
 interface RenderServiceOptions {
     canvas: HTMLCanvasElement;
@@ -38,19 +37,252 @@ interface RenderServiceOptions {
     user_id: string;
 }
 
+interface PositionDirection {
+    x: number;
+    y: number;
+    direction_x: number;
+    direction_y: number;
+}
 
-function has_outlived_lifetime(emote: BaseEmote, lifetime: number): boolean {
-    return Date.now() - emote.created_at > lifetime;
+interface RepositionOptions {
+    width: number;
+    height: number;
+
+    renderable: RenderableEmote | AnimatedRenderableEmote;
+    canvas: HTMLCanvasElement;
+}
+
+abstract class Renderable {
+    created_at: number;
+    lifetime: number;
+    position_x: number;
+    position_y: number;
+
+    constructor (opts: RenderableOptions) {
+        this.created_at = Date.now();
+        this.lifetime = opts.lifetime;
+        this.position_x = opts.position_x;
+        this.position_y = opts.position_y;
+    }
+
+    has_outlived_lifetime (now: number): boolean {
+        return now - this.created_at > this.lifetime;
+    }
+
+    abstract render (canvas: CanvasRenderingContext2D): void;
+}
+
+class RepositionLogic {
+    static reposition (opts: RepositionOptions): PositionDirection {
+        const width = opts.width;
+        const height = opts.height;
+        
+        // move the emote
+        let x = opts.renderable.position_x + opts.renderable.velocity * opts.renderable.direction_x;
+        let y = opts.renderable.position_y + opts.renderable.velocity * opts.renderable.direction_y;
+
+        // bounce the emote off the walls
+        if (x + width > opts.canvas.width) {
+            opts.renderable.direction_x = -1;
+        }
+
+        if (x < 0) {
+            opts.renderable.direction_x = 1;
+        }
+
+        if (y + height > opts.canvas.height) {
+            opts.renderable.direction_y = -1;
+        }
+
+        if (y < 0) {
+            opts.renderable.direction_y = 1;
+        }
+
+        return {
+            x,
+            y,
+            direction_x: opts.renderable.direction_x,
+            direction_y: opts.renderable.direction_y,
+        };
+    }
+}
+
+class RenderableImage extends Renderable {
+    image: HTMLImageElement;
+
+    constructor (opts: RenderableImageOptions) {
+        super(opts);
+
+        this.image = opts.image;
+    }
+
+    render (context: CanvasRenderingContext2D): void {
+        const opacity = 1 - (Date.now() - this.created_at) / this.lifetime;
+
+        context.globalAlpha = opacity;
+        context.drawImage(
+            this.image,
+            this.position_x,
+            this.position_y,
+        );
+
+        console.log(`main render: ${this.position_x}, ${this.position_y}`)
+    }
+}
+
+class RenderableAnimatedImage extends Renderable {
+    frames: Frame[];
+    last_frame: number;
+    last_rendered_at: number;
+
+    constructor (opts: RenderableAnimatedImageOptions) {
+        super(opts);
+
+        this.frames = opts.frames;
+        this.last_frame = opts.last_frame;
+        this.last_rendered_at = opts.last_rendered_at;
+    }
+
+    render (context: CanvasRenderingContext2D): void {
+        const now = Date.now();
+        const last_rendered = this.last_rendered_at;
+        const frame = this.frames[this.last_frame];
+        const in_memory_canvas = document.createElement('canvas');
+        const in_memory_context = in_memory_canvas.getContext('2d');
+        const opacity = 1 - (Date.now() - this.created_at) / this.lifetime;
+
+        // if the frame has expired, move to the next frame
+        if (now - last_rendered > frame.duration) {
+            if (this.last_frame === this.frames.length - 1) {
+                this.last_frame = 0;
+            } else {
+                this.last_frame++;
+            }
+
+            this.last_rendered_at = now;
+        }
+
+        in_memory_canvas.width = frame.frame_width;
+        in_memory_canvas.height = frame.frame_height;
+
+        const frame_image_data = in_memory_context.createImageData(
+            frame.frame_width,
+            frame.frame_height,
+        );
+
+        frame_image_data.data.set(frame.data);
+        
+        in_memory_context.putImageData(
+            frame_image_data,
+            0,
+            0,
+        );
+        
+        context.globalAlpha = opacity;
+        context.drawImage(
+            in_memory_canvas,
+            this.position_x,
+            this.position_y,
+        );
+    }
+}
+
+
+class RenderableEmote extends RenderableImage implements RenderableEmoteOpts {
+    direction_x: number;
+    direction_y: number;
+    velocity: number;
+
+    constructor (opts: RenderableEmoteOpts) {
+        super(opts);
+
+        this.direction_x = opts.direction_x;
+        this.direction_y = opts.direction_y;
+        this.velocity = opts.velocity;
+    }
+
+    render (context: CanvasRenderingContext2D): void {
+        const opacity = 1 - (Date.now() - this.created_at) / this.lifetime;
+        const width = this.image.width;
+        const height = this.image.height;
+
+        if (this.has_outlived_lifetime(Date.now())) {
+            return;
+        }
+
+        // move the emote
+        const position = RepositionLogic.reposition({
+            width,
+            height,
+            renderable: this,
+            canvas: context.canvas,
+        });
+
+        this.position_x = position.x;
+        this.position_y = position.y;
+        this.direction_x = position.direction_x;
+        this.direction_y = position.direction_y;
+
+        // set image opacity
+        context.globalAlpha = opacity;
+        super.render(context);
+    }
+}
+
+class AnimatedRenderableEmote extends RenderableAnimatedImage {
+    direction_x: number;
+    direction_y: number;
+    velocity: number;
+
+    constructor (opts: RenderableAnimatedEmoteOpts) {
+        super(opts);
+
+        this.frames = opts.frames;
+        this.last_frame = opts.last_frame;
+        this.last_rendered_at = opts.last_rendered_at;
+
+        this.direction_x = opts.direction_x;
+        this.direction_y = opts.direction_y;
+        this.velocity = opts.velocity;
+    }
+
+    render (context: CanvasRenderingContext2D): void {
+        const opacity = 1 - (Date.now() - this.created_at) / this.lifetime;
+        const width = this.frames[this.last_frame].frame_width;
+        const height = this.frames[this.last_frame].frame_height;
+
+        if (this.has_outlived_lifetime(Date.now())) {
+            return;
+        }
+
+        // move the emote
+        const position = RepositionLogic.reposition({
+            width,
+            height,
+            renderable: this,
+            canvas: context.canvas,
+        });
+
+        this.position_x = position.x;
+        this.position_y = position.y;
+        this.direction_x = position.direction_x;
+        this.direction_y = position.direction_y;
+
+        // set image opacity
+        context.globalAlpha = opacity;
+        super.render(context);
+    }
 }
 
 class RenderService {
-    emotes: BaseEmote[] = [];
     canvas: HTMLCanvasElement;
     in_memory_canvas: HTMLCanvasElement;
     in_memory_context: CanvasRenderingContext2D;
     context: CanvasRenderingContext2D;
     emote_lifetime_secs: number = 1000;
     emote_service: EmoteService;
+
+    queue: Renderable[] = [];
 
     constructor (opts: RenderServiceOptions) {
         this.canvas = opts.canvas
@@ -65,9 +297,14 @@ class RenderService {
         const raw_emote = await this
             .emote_service
             .get_twitch_emote(chat_emote.id);
-        
-        let emote: BaseEmote = {
-            animated: false,
+    
+        //if the image is missing, don't add it
+        if (!raw_emote) {
+            return;
+        }
+
+        let new_emote = null;
+        let base_emote = {
             created_at: Date.now(),
             position_x: Math.random() * this.canvas.width,
             position_y: Math.random() * this.canvas.height,
@@ -76,41 +313,35 @@ class RenderService {
             direction_x: Math.random() > 0.5 ? 1 : -1,
             direction_y: Math.random() > 0.5 ? 1 : -1,
 
-            velocity_x: 3,
-            velocity_y: 3,
+            velocity: 3,
+            lifetime: this.emote_lifetime_secs,
         };
 
         //if the image is missing, don't add it
-        if (!emote) {
+        if (!raw_emote) {
             return;
         }
 
         // if the image is animated, add it as an animated emote
         if (raw_emote.animated) {
-            let animated_emote: AnimatedRenderableEmote = {
-                ...emote,
-                animated: true,
-                frames: null,
+            let animated_emote = new AnimatedRenderableEmote({
+                ...base_emote,
+                frames: (raw_emote as AnimatedEmote).frames,
                 last_frame: 0,
                 last_rendered_at: Date.now(),
-            }
+            });
 
-            animated_emote.frames = (raw_emote as AnimatedEmote).frames;
-            animated_emote.last_rendered_at = Date.now();
-            
-            emote = animated_emote;
+            new_emote = animated_emote;
         } else {
-            let renderable_emote = raw_emote as RawEmote;
-            let renderable: RenderableEmote = {
-                ...emote,
-                animated: false,
+            let static_emote = new RenderableEmote({
+                ...base_emote,
                 image: (raw_emote as RawEmote).image,
-            }
+            });
 
-            emote = renderable;
+            new_emote = static_emote;
         }
 
-        this.emotes.push(emote);
+        this.queue.push(new_emote);
     }
 
     async add_emotes (emotes: ChatEmote[]): Promise<void> {
@@ -128,109 +359,19 @@ class RenderService {
         );
     }
 
-    _render_animated_emote (emote: AnimatedRenderableEmote): void {
-        const now = Date.now();
-        const last_rendered = emote.last_rendered_at;
-        const frame = emote.frames[emote.last_frame];
-
-        // if the frame has expired, move to the next frame
-        if (now - last_rendered > frame.duration) {
-            if (emote.last_frame === emote.frames.length - 1) {
-                emote.last_frame = 0;
-            } else {
-                emote.last_frame++;
-            }
-
-            emote.last_rendered_at = now;
-        }
-
-        this.in_memory_canvas.width = frame.frame_width;
-        this.in_memory_canvas.height = frame.frame_height;
-
-        const frame_image_data = this.in_memory_context.createImageData(
-            frame.frame_width,
-            frame.frame_height,
-        );
-
-        frame_image_data.data.set(frame.data);
-        
-        this.in_memory_context.putImageData(
-            frame_image_data,
-            0,
-            0,
-        );
-
-        this.context.drawImage(
-            this.in_memory_canvas,
-            emote.position_x,
-            emote.position_y,
-        );
-    }
-
-
     _render (): void {
+        const now = Date.now();
+
         this.clear_canvas();
 
-        for (const emote of this.emotes) {
-            let width: number = null;
-            let height: number = null;
-
-            if (has_outlived_lifetime(emote, this.emote_lifetime_secs)) {
-                this.emotes.splice(this.emotes.indexOf(emote), 1);
-                continue
+        for (const renderable of this.queue) {
+            console.log(renderable);
+            if (renderable.has_outlived_lifetime(now)) {
+                this.queue.splice(this.queue.indexOf(renderable), 1);
+                continue;
             }
 
-            // if the emote is animated, we need to render it differently
-            if (emote.animated) {
-                let render_emote = emote as AnimatedRenderableEmote;
-
-                width = render_emote.frames[render_emote.last_frame].frame_width;
-                height = render_emote.frames[render_emote.last_frame].frame_height;
-
-                console.log(width, height)
-            } else {
-                let render_emote = emote as RenderableEmote;
-                
-                console.log(`Image is ${render_emote.image}`)
-                width = render_emote.image.width;       
-                height = render_emote.image.height;
-            }
-
-            // move the emote
-            emote.position_x += emote.velocity_x * emote.direction_x;
-            emote.position_y += emote.velocity_y * emote.direction_y;
-
-            // bounce the emote off the walls
-            if (emote.position_x + width > this.canvas.width) {
-                emote.direction_x = -1;
-            }
-
-            if (emote.position_x < 0) {
-                emote.direction_x = 1;
-            }
-
-            if (emote.position_y + height > this.canvas.height) {
-                emote.direction_y = -1;
-            }
-
-            if (emote.position_y < 0) {
-                emote.direction_y = 1;
-            }
-
-            // set image opacity
-            const opacity = 1 - (Date.now() - emote.created_at) / this.emote_lifetime_secs;
-            this.context.globalAlpha = opacity;
-            
-            // if the emote is animated, render it differently
-            if (emote.animated) {
-                this._render_animated_emote(emote as AnimatedRenderableEmote);
-            } else {
-                this.context.drawImage(
-                    (emote as RenderableEmote).image,
-                    emote.position_x,
-                    emote.position_y,
-                );
-            }
+            renderable.render(this.context);
         }
     }
 
@@ -246,13 +387,4 @@ class RenderService {
 }
 
 
-export { RenderService as Renderer, RenderableEmote, ChatEmote };
-
-// https://stackoverflow.com/questions/52438094/how-to-animate-an-image-in-canvas-using-requestanimationframe
-// function loop(): void {
-//     // this can be used for rendering; we probably 
-//     // just need to move images at this frequecy
-//     // https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame
-//     // https://w3schools.com/jsref/met_win_requestanimationframe.asp
-//     requestAnimationFrame(loop);
-// }
+export { RenderService, ChatEmote };
