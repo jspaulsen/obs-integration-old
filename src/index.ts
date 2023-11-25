@@ -1,5 +1,6 @@
 import ChatService from './chat_service';
-import { RenderService } from './render';
+import { RenderService } from './renderable/render';
+import { RenderQueue } from './renderable';
 
 import './styles.css';
 
@@ -16,6 +17,9 @@ function resize_canvas(): void {
 
 async function main(): Promise<void> {
     const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+    const audio = document.getElementById('audio') as HTMLAudioElement;
+    const display = document.getElementById('display') as HTMLDivElement;
+    const render_queue = new RenderQueue();
 
     // size the canvas to the window
     canvas.width = window.innerWidth;
@@ -23,6 +27,9 @@ async function main(): Promise<void> {
 
     const renderer = new RenderService({
         canvas,
+        audio,
+        display,
+        render_queue,
         emote_lifetime_secs: 10,
         user_id: '1', // TODO: get this from the twitch api
     });

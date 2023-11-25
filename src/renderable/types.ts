@@ -1,9 +1,6 @@
-import { EmoteService, Frame, RawEmote, AnimatedEmote } from './emotes';
+import { Frame } from '../emotes';
+import { RenderableInput, RenderableImageInput, RenderableAnimatedImageInput, RenderableEmoteInput, RenderableAnimatedEmoteInput } from './inputs';
 
-
-interface ChatEmote {
-    id: string
-}
 
 interface RenderableOptions {
     lifetime: number;
@@ -52,6 +49,13 @@ interface RepositionOptions {
     canvas: HTMLCanvasElement;
 }
 
+interface RenderContext {
+    canvas: HTMLCanvasElement;
+    context: CanvasRenderingContext2D;
+    audio: HTMLAudioElement;
+    display: HTMLDivElement;
+}
+
 abstract class Renderable {
     created_at: number;
     lifetime: number;
@@ -69,7 +73,12 @@ abstract class Renderable {
         return now - this.created_at > this.lifetime;
     }
 
-    abstract render (canvas: CanvasRenderingContext2D): void;
+    cleanup (context: RenderContext): void { }
+
+    abstract render (context: RenderContext): void;
+    static from_renderable_input (input: RenderableInput, context: RenderContext): Renderable {
+        throw new Error('Not implemented');
+    }
 }
 
 class RepositionLogic {
@@ -116,17 +125,26 @@ class RenderableImage extends Renderable {
         this.image = opts.image;
     }
 
-    render (context: CanvasRenderingContext2D): void {
+    render (context: RenderContext): void {
         const opacity = 1 - (Date.now() - this.created_at) / this.lifetime;
 
-        context.globalAlpha = opacity;
-        context.drawImage(
+        context.context.globalAlpha = opacity;
+        context.context.drawImage(
             this.image,
             this.position_x,
             this.position_y,
         );
+    }
 
-        console.log(`main render: ${this.position_x}, ${this.position_y}`)
+    static from_renderable_input (input: RenderableImageInput, _: RenderContext): Renderable {
+        const renderable = input as RenderableImageInput;
+
+        return new RenderableImage({
+            image: renderable.image,
+            lifetime: renderable.lifetime,
+            position_x: renderable.position_x,
+            position_y: renderable.position_y,
+        });
     }
 }
 
@@ -143,7 +161,7 @@ class RenderableAnimatedImage extends Renderable {
         this.last_rendered_at = opts.last_rendered_at;
     }
 
-    render (context: CanvasRenderingContext2D): void {
+    render (context: RenderContext): void {
         const now = Date.now();
         const last_rendered = this.last_rendered_at;
         const frame = this.frames[this.last_frame];
@@ -178,17 +196,29 @@ class RenderableAnimatedImage extends Renderable {
             0,
         );
         
-        context.globalAlpha = opacity;
-        context.drawImage(
+        context.context.globalAlpha = opacity;
+        context.context.drawImage(
             in_memory_canvas,
             this.position_x,
             this.position_y,
         );
     }
+
+    static from_renderable_input (input: RenderableAnimatedImageInput, _: RenderContext): Renderable {
+        const renderable = input as RenderableAnimatedImageInput;
+
+        return new RenderableAnimatedImage({
+            frames: renderable.frames,
+            last_frame: 0,
+            last_rendered_at: Date.now(),
+            lifetime: renderable.lifetime,
+            position_x: renderable.position_x,
+            position_y: renderable.position_y,
+        });
+    }
 }
 
-
-class RenderableEmote extends RenderableImage implements RenderableEmoteOpts {
+class RenderableEmote extends RenderableImage {
     direction_x: number;
     direction_y: number;
     velocity: number;
@@ -201,7 +231,7 @@ class RenderableEmote extends RenderableImage implements RenderableEmoteOpts {
         this.velocity = opts.velocity;
     }
 
-    render (context: CanvasRenderingContext2D): void {
+    render (context: RenderContext): void {
         const opacity = 1 - (Date.now() - this.created_at) / this.lifetime;
         const width = this.image.width;
         const height = this.image.height;
@@ -224,8 +254,24 @@ class RenderableEmote extends RenderableImage implements RenderableEmoteOpts {
         this.direction_y = position.direction_y;
 
         // set image opacity
-        context.globalAlpha = opacity;
+        context.context.globalAlpha = opacity;
         super.render(context);
+    }
+
+    static from_renderable_input (input: RenderableEmoteInput, context: RenderContext): Renderable {
+        const renderable = input as RenderableEmoteInput;
+
+        return new RenderableEmote({
+            image: renderable.image,
+            lifetime: renderable.lifetime,
+            position_x: Math.random() * context.canvas.width,
+            position_y: Math.random() * context.canvas.height,
+
+            // direction and velocity
+            direction_x: Math.random() > 0.5 ? 1 : -1,
+            direction_y: Math.random() > 0.5 ? 1 : -1,
+            velocity: Math.random() * 5,
+        });
     }
 }
 
@@ -246,7 +292,7 @@ class AnimatedRenderableEmote extends RenderableAnimatedImage {
         this.velocity = opts.velocity;
     }
 
-    render (context: CanvasRenderingContext2D): void {
+    render (context: RenderContext): void {
         const opacity = 1 - (Date.now() - this.created_at) / this.lifetime;
         const width = this.frames[this.last_frame].frame_width;
         const height = this.frames[this.last_frame].frame_height;
@@ -269,122 +315,42 @@ class AnimatedRenderableEmote extends RenderableAnimatedImage {
         this.direction_y = position.direction_y;
 
         // set image opacity
-        context.globalAlpha = opacity;
+        context.context.globalAlpha = opacity;
         super.render(context);
     }
-}
 
-class RenderService {
-    canvas: HTMLCanvasElement;
-    in_memory_canvas: HTMLCanvasElement;
-    in_memory_context: CanvasRenderingContext2D;
-    context: CanvasRenderingContext2D;
-    emote_lifetime_secs: number = 1000;
-    emote_service: EmoteService;
+    static from_renderable_input (input: RenderableAnimatedEmoteInput, context: RenderContext): Renderable {
+        const renderable = input as RenderableAnimatedEmoteInput;
 
-    queue: Renderable[] = [];
-
-    constructor (opts: RenderServiceOptions) {
-        this.canvas = opts.canvas
-        this.in_memory_canvas = document.createElement('canvas');
-        this.in_memory_context = this.in_memory_canvas.getContext('2d');
-        this.context = this.canvas.getContext('2d');
-        this.emote_lifetime_secs = (opts.emote_lifetime_secs || this.emote_lifetime_secs) * 1000;
-        this.emote_service = new EmoteService(opts.user_id);
-    }
-
-    async add_emote (chat_emote: ChatEmote): Promise<void> {
-        const raw_emote = await this
-            .emote_service
-            .get_twitch_emote(chat_emote.id);
-    
-        //if the image is missing, don't add it
-        if (!raw_emote) {
-            return;
-        }
-
-        let new_emote = null;
-        let base_emote = {
-            created_at: Date.now(),
-            position_x: Math.random() * this.canvas.width,
-            position_y: Math.random() * this.canvas.height,
+        return new AnimatedRenderableEmote({
+            frames: renderable.frames,
+            last_frame: 0,
+            last_rendered_at: Date.now(),
+            lifetime: renderable.lifetime,
+            position_x: Math.random() * context.canvas.width,
+            position_y: Math.random() * context.canvas.height,
 
             // direction and velocity
             direction_x: Math.random() > 0.5 ? 1 : -1,
             direction_y: Math.random() > 0.5 ? 1 : -1,
-
-            velocity: 3,
-            lifetime: this.emote_lifetime_secs,
-        };
-
-        //if the image is missing, don't add it
-        if (!raw_emote) {
-            return;
-        }
-
-        // if the image is animated, add it as an animated emote
-        if (raw_emote.animated) {
-            let animated_emote = new AnimatedRenderableEmote({
-                ...base_emote,
-                frames: (raw_emote as AnimatedEmote).frames,
-                last_frame: 0,
-                last_rendered_at: Date.now(),
-            });
-
-            new_emote = animated_emote;
-        } else {
-            let static_emote = new RenderableEmote({
-                ...base_emote,
-                image: (raw_emote as RawEmote).image,
-            });
-
-            new_emote = static_emote;
-        }
-
-        this.queue.push(new_emote);
-    }
-
-    async add_emotes (emotes: ChatEmote[]): Promise<void> {
-        for (const emote of emotes) {
-            await this.add_emote(emote);
-        }
-    }
-
-    clear_canvas (): void {
-        this.context.clearRect(
-            0, 
-            0, 
-            this.canvas.width, 
-            this.canvas.height,
-        );
-    }
-
-    _render (): void {
-        const now = Date.now();
-
-        this.clear_canvas();
-
-        for (const renderable of this.queue) {
-            console.log(renderable);
-            if (renderable.has_outlived_lifetime(now)) {
-                this.queue.splice(this.queue.indexOf(renderable), 1);
-                continue;
-            }
-
-            renderable.render(this.context);
-        }
-    }
-
-    render (): void {
-        this._render();
-
-        requestAnimationFrame(
-            this
-                .render
-                .bind(this)
-        );
+            velocity: Math.random() * 5,
+        });
     }
 }
 
-
-export { RenderService, ChatEmote };
+export {
+    RenderableOptions,
+    RenderableImageOptions,
+    RenderableAnimatedImageOptions,
+    RenderableEmoteOpts,
+    RenderableAnimatedEmoteOpts,
+    RenderServiceOptions,
+    Renderable,
+    RenderableImage,
+    RenderableAnimatedImage,
+    RenderableEmote,
+    AnimatedRenderableEmote,
+    RepositionOptions,
+    RepositionLogic,
+    RenderContext,
+}

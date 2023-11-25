@@ -1,5 +1,5 @@
 import ChatClient from "./chat";
-import { RenderService, ChatEmote } from "./render";
+import { RenderService, ChatEmote } from "./renderable/render";
 
 
 interface ChatServiceOptions {
