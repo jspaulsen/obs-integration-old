@@ -30,13 +30,15 @@ async function main(): Promise<void> {
         audio,
         display,
         render_queue,
-        emote_lifetime_secs: 10,
         user_id: '1', // TODO: get this from the twitch api
     });
 
     const manager = new ChatService({
         channel: 'cannibaljeebus',
-        renderer,
+        queue: render_queue,
+        client_id: '9z6j3m7q2x8q7q9n3x3g2j8t6z6j3m',
+        user_id: '1',
+        emote_lifetime_secs: 2,
     });
 
     // Connect to channel

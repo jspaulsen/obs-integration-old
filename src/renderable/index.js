@@ -1,4 +1,10 @@
-// import { Renderable } from './render';
-import RenderQueue from './render_queue';
+import RenderQueue from './queue';
+import { RenderableInput, RenderableImageInput, RenderableEmoteInput, RenderableAnimatedEmoteInput } from './inputs';
 
-export { RenderQueue };
+export { 
+    RenderQueue,
+    RenderableInput,
+    RenderableImageInput,
+    RenderableEmoteInput,
+    RenderableAnimatedEmoteInput,
+}

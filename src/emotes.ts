@@ -19,7 +19,7 @@ interface Frame {
     left: number;
 }
 
-interface AnimatedEmote extends BaseEmote {
+interface AnimatedRawEmote extends BaseEmote {
     animated: true;
     frames: Frame[];
 }
@@ -32,10 +32,10 @@ class EmoteService {
         this.user_id = user_id;
     }
 
-    async _into_animated_emote (data: ArrayBuffer): Promise<AnimatedEmote> {
+    async _into_animated_emote (data: ArrayBuffer): Promise<AnimatedRawEmote> {
         const gif = parseGIF(data);
         const frames = decompressFrames(gif, true);
-        const emote: AnimatedEmote = {
+        const emote: AnimatedRawEmote = {
             animated: true,
             frames: frames.map((frame) => ({
                 data: frame.patch,
@@ -119,4 +119,4 @@ function get_emote_url(emote_id: string, theme_mode?: string, scale?: string): s
         .replace('<scale>', scale || '2.0');
 }
 
-export { EmoteService, BaseEmote, RawEmote, AnimatedEmote, Frame }
+export { EmoteService, BaseEmote, RawEmote, AnimatedRawEmote, Frame }

@@ -1,7 +1,6 @@
-import { EmoteService, RawEmote, AnimatedEmote } from '../emotes';
 import { Renderable, RenderableImage, RenderableEmote, AnimatedRenderableEmote, RenderContext } from './types';
 import { RenderableInput, RenderableImageInput, RenderableEmoteInput, RenderableAnimatedImageInput, RenderableAnimatedEmoteInput } from './inputs';
-import RenderQueue from './render_queue';
+import RenderQueue from './queue';
 
 
 function into_renderable(input: RenderableInput, context: RenderContext): Renderable {
@@ -39,81 +38,20 @@ class RenderService {
     in_memory_canvas: HTMLCanvasElement;
     in_memory_context: CanvasRenderingContext2D;
     context: CanvasRenderingContext2D;
-    emote_lifetime_secs: number = 1000;
-    emote_service: EmoteService;
     audio: HTMLAudioElement;
     display: HTMLDivElement;
 
     render_queue: Renderable[] = [];
-    _queue: RenderQueue;
+    queue: RenderQueue;
 
     constructor (opts: RenderServiceOptions) {
         this.canvas = opts.canvas
         this.in_memory_canvas = document.createElement('canvas');
         this.in_memory_context = this.in_memory_canvas.getContext('2d');
         this.context = this.canvas.getContext('2d');
-        this.emote_lifetime_secs = (opts.emote_lifetime_secs || this.emote_lifetime_secs) * 1000;
-        this.emote_service = new EmoteService(opts.user_id);
-        this._queue = opts.render_queue;
+        this.queue = opts.render_queue;
         this.audio = opts.audio;
         this.display = opts.display;
-    }
-
-    async add_emote (chat_emote: ChatEmote): Promise<void> {
-        const raw_emote = await this
-            .emote_service
-            .get_twitch_emote(chat_emote.id);
-    
-        //if the image is missing, don't add it
-        if (!raw_emote) {
-            return;
-        }
-
-        let new_emote = null;
-        let base_emote = {
-            created_at: Date.now(),
-            position_x: Math.random() * this.canvas.width,
-            position_y: Math.random() * this.canvas.height,
-
-            // direction and velocity
-            direction_x: Math.random() > 0.5 ? 1 : -1,
-            direction_y: Math.random() > 0.5 ? 1 : -1,
-
-            velocity: 3,
-            lifetime: this.emote_lifetime_secs,
-        };
-
-        //if the image is missing, don't add it
-        if (!raw_emote) {
-            return;
-        }
-
-        // if the image is animated, add it as an animated emote
-        if (raw_emote.animated) {
-            let animated_emote = new AnimatedRenderableEmote({
-                ...base_emote,
-                frames: (raw_emote as AnimatedEmote).frames,
-                last_frame: 0,
-                last_rendered_at: Date.now(),
-            });
-
-            new_emote = animated_emote;
-        } else {
-            let static_emote = new RenderableEmote({
-                ...base_emote,
-                image: (raw_emote as RawEmote).image,
-            });
-
-            new_emote = static_emote;
-        }
-
-        this.render_queue.push(new_emote);
-    }
-
-    async add_emotes (emotes: ChatEmote[]): Promise<void> {
-        for (const emote of emotes) {
-            await this.add_emote(emote);
-        }
     }
 
     clear_canvas (): void {
@@ -135,7 +73,7 @@ class RenderService {
         }
 
         const new_renderables = this
-            ._queue
+            .queue
             .get_items()
             .map((input) => into_renderable(input, context));
 
