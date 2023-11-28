@@ -50,6 +50,7 @@ class EmoteService {
         return emote;
     }
 
+    // TODO: Refactor this into "get_emote" which takes an id and returns emote | null
     async get_twitch_emote (emote_id: string): Promise<BaseEmote> {
         if (this.cache.has(emote_id)) {
             return this.cache.get(emote_id);
@@ -68,9 +69,6 @@ class EmoteService {
         // if the emote is a gif, we need to parse it
         if (content_type === 'image/gif') {
             emote = await this._into_animated_emote(await result.arrayBuffer());
-            // const emote = await this._into_animated_emote(await result.arrayBuffer());
-            // this.cache.set(emote_id, emote);
-            // return emote;
         } else {
             const image = new Image();
             image.src = URL.createObjectURL(await result.blob());
@@ -84,30 +82,6 @@ class EmoteService {
         this.cache.set(emote_id, emote);
         return emote;
     }
-
-    // async get_7tv_emote (emote_id: string): Promise<HTMLImageElement> {
-    //     const image = new Image();
-
-    //     if (this.cache.has(emote_id)) {
-    //         image.src = this.cache.get(emote_id);
-    //         return image;
-    //     }
-
-    //     const result = await fetch(get_7tv_emote_url(emote_id));
-
-    //     // if the image is missing, don't add it
-    //     if (!result.ok) {
-    //         return null;
-    //     }
-
-    //     // convert image into a data url
-    //     const data_url = URL.createObjectURL(await result.blob());
-
-    //     this.cache.set(emote_id, data_url);
-    //     image.src = data_url;
-
-    //     return image;
-    // }
 }
 
 function get_emote_url(emote_id: string, theme_mode?: string, scale?: string): string {

@@ -28,7 +28,6 @@ interface RenderServiceOptions {
     canvas: HTMLCanvasElement;
     render_queue: RenderQueue;
     emote_lifetime_secs?: number;
-    user_id: string;
     audio: HTMLAudioElement;
     display: HTMLDivElement;
 }
@@ -69,7 +68,7 @@ class RenderService {
             canvas: this.canvas,
             context: this.context,
             audio: this.audio,
-            display: document.getElementById('display') as HTMLDivElement, // TODO: fix this
+            display: this.display,
         }
 
         const new_renderables = this
@@ -81,14 +80,15 @@ class RenderService {
         this.clear_canvas();
 
         // TODO: Iterate through the list if renderables; if the renderable requires a specific item (i.e., audio),
-        // check if it's loaded. If it's not, don't render it. 
+        // check if it's loaded. If it's not, don't render it.
+        // Actually, we should probably just have a flag to indicate whether visual/audio is currently loaded
     
         for (const renderable of this.render_queue) {
             if (renderable.has_outlived_lifetime(now)) {
                 this.render_queue.splice(this.render_queue.indexOf(renderable), 1);
                 continue;
             }
-
+            
             renderable.render(context);
         }
     }

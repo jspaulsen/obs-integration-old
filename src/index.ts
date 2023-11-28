@@ -1,6 +1,8 @@
-import ChatService from './chat_service';
 import { RenderService } from './renderable/render';
 import { RenderQueue } from './renderable';
+import  ChatClient  from './chat';
+import { EmoteHandler } from './handlers';
+import { EventRouter, TwitchEvent } from './event_router';
 
 import './styles.css';
 
@@ -30,19 +32,28 @@ async function main(): Promise<void> {
         audio,
         display,
         render_queue,
-        user_id: '1', // TODO: get this from the twitch api
     });
 
-    const manager = new ChatService({
+    const event_router = new EventRouter(render_queue);
+    const emote_handler = new EmoteHandler(
+        '1', // user_id 
+        3, // lifetime_secs
+    );
+
+    // setup event router
+    event_router.register(
+        TwitchEvent.Chat,
+        emote_handler.on_handle_emote_event.bind(emote_handler),
+    );
+
+    const chat_client = new ChatClient({
         channel: 'cannibaljeebus',
-        queue: render_queue,
-        client_id: '9z6j3m7q2x8q7q9n3x3g2j8t6z6j3m',
-        user_id: '1',
-        emote_lifetime_secs: 2,
+        //client_id: 'abc123', // TODO:
+        callback: event_router.on_chat_event.bind(event_router),
     });
 
     // Connect to channel
-    manager.connect();
+    chat_client.connect();
     renderer.render();
 }
 
