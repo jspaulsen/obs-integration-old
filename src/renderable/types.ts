@@ -57,20 +57,15 @@ interface RenderContext {
 }
 
 abstract class Renderable {
-    created_at: number;
     lifetime: number;
+    sequential: boolean = true;
     position_x: number;
     position_y: number;
 
     constructor (opts: RenderableOptions) {
-        this.created_at = Date.now();
         this.lifetime = opts.lifetime;
         this.position_x = opts.position_x;
         this.position_y = opts.position_y;
-    }
-
-    has_outlived_lifetime (now: number): boolean {
-        return now - this.created_at > this.lifetime;
     }
 
     cleanup (context: RenderContext): void { }
@@ -126,9 +121,10 @@ class RenderableImage extends Renderable {
     }
 
     render (context: RenderContext): void {
-        const opacity = 1 - (Date.now() - this.created_at) / this.lifetime;
+        // TODO: Figure this part out
+        // const opacity = 1 - (Date.now() - this.rendered_at) / this.lifetime;
+        // context.context.globalAlpha = opacity;
 
-        context.context.globalAlpha = opacity;
         context.context.drawImage(
             this.image,
             this.position_x,
@@ -167,7 +163,7 @@ class RenderableAnimatedImage extends Renderable {
         const frame = this.frames[this.last_frame];
         const in_memory_canvas = document.createElement('canvas');
         const in_memory_context = in_memory_canvas.getContext('2d');
-        const opacity = 1 - (Date.now() - this.created_at) / this.lifetime;
+        // const opacity = 1 - (Date.now() - this.rendered_at) / this.lifetime;
 
         // if the frame has expired, move to the next frame
         if (now - last_rendered > frame.duration) {
@@ -196,7 +192,7 @@ class RenderableAnimatedImage extends Renderable {
             0,
         );
         
-        context.context.globalAlpha = opacity;
+        // context.context.globalAlpha = opacity;
         context.context.drawImage(
             in_memory_canvas,
             this.position_x,
@@ -222,6 +218,7 @@ class RenderableEmote extends RenderableImage {
     direction_x: number;
     direction_y: number;
     velocity: number;
+    sequential: boolean = false;
 
     constructor (opts: RenderableEmoteOpts) {
         super(opts);
@@ -232,13 +229,9 @@ class RenderableEmote extends RenderableImage {
     }
 
     render (context: RenderContext): void {
-        const opacity = 1 - (Date.now() - this.created_at) / this.lifetime;
+        // const opacity = 1 - (Date.now() - this.rendered_at) / this.lifetime;
         const width = this.image.width;
         const height = this.image.height;
-
-        if (this.has_outlived_lifetime(Date.now())) {
-            return;
-        }
 
         // move the emote
         const position = RepositionLogic.reposition({
@@ -254,7 +247,7 @@ class RenderableEmote extends RenderableImage {
         this.direction_y = position.direction_y;
 
         // set image opacity
-        context.context.globalAlpha = opacity;
+        // context.context.globalAlpha = opacity;
         super.render(context);
     }
 
@@ -279,6 +272,7 @@ class AnimatedRenderableEmote extends RenderableAnimatedImage {
     direction_x: number;
     direction_y: number;
     velocity: number;
+    sequential: boolean = false;
 
     constructor (opts: RenderableAnimatedEmoteOpts) {
         super(opts);
@@ -293,13 +287,9 @@ class AnimatedRenderableEmote extends RenderableAnimatedImage {
     }
 
     render (context: RenderContext): void {
-        const opacity = 1 - (Date.now() - this.created_at) / this.lifetime;
+        // const opacity = 1 - (Date.now() - this.rendered_at) / this.lifetime;
         const width = this.frames[this.last_frame].frame_width;
         const height = this.frames[this.last_frame].frame_height;
-
-        if (this.has_outlived_lifetime(Date.now())) {
-            return;
-        }
 
         // move the emote
         const position = RepositionLogic.reposition({
@@ -315,7 +305,7 @@ class AnimatedRenderableEmote extends RenderableAnimatedImage {
         this.direction_y = position.direction_y;
 
         // set image opacity
-        context.context.globalAlpha = opacity;
+        // context.context.globalAlpha = opacity;
         super.render(context);
     }
 

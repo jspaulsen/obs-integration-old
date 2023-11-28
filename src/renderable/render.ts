@@ -20,16 +20,29 @@ function into_renderable(input: RenderableInput, context: RenderContext): Render
 }
 
 
-interface ChatEmote {
-    id: string
-}
-
 interface RenderServiceOptions {
     canvas: HTMLCanvasElement;
     render_queue: RenderQueue;
     emote_lifetime_secs?: number;
     audio: HTMLAudioElement;
     display: HTMLDivElement;
+}
+
+
+class MortalRenderable {
+    lifetime: number;
+    start_time: number;
+    renderable: Renderable;
+
+    constructor (renderable: Renderable, lifetime: number) {
+        this.lifetime = lifetime;
+        this.renderable = renderable;
+        this.start_time = Date.now();
+    }
+
+    has_outlived_lifetime (now: number): boolean {
+        return now - this.start_time > this.lifetime;
+    }
 }
 
 class RenderService {
@@ -40,7 +53,7 @@ class RenderService {
     audio: HTMLAudioElement;
     display: HTMLDivElement;
 
-    render_queue: Renderable[] = [];
+    render_queue: MortalRenderable[] = [];
     queue: RenderQueue;
 
     constructor (opts: RenderServiceOptions) {
@@ -71,10 +84,15 @@ class RenderService {
             display: this.display,
         }
 
-        const new_renderables = this
+        const new_renderables: MortalRenderable[] = this
             .queue
             .get_items()
-            .map((input) => into_renderable(input, context));
+            .map((input) => {
+                return new MortalRenderable(
+                    into_renderable(input, context),
+                    input.lifetime,
+                );
+            })
 
         this.render_queue.push(...new_renderables);
         this.clear_canvas();
@@ -82,15 +100,32 @@ class RenderService {
         // TODO: Iterate through the list if renderables; if the renderable requires a specific item (i.e., audio),
         // check if it's loaded. If it's not, don't render it.
         // Actually, we should probably just have a flag to indicate whether visual/audio is currently loaded
-    
-        for (const renderable of this.render_queue) {
+        const nqueue: MortalRenderable[] = [];
+        let sequential_renderable_loaded = false;
+
+        while (this.render_queue.length > 0) {
+            const renderable = this.render_queue.shift();
+
             if (renderable.has_outlived_lifetime(now)) {
-                this.render_queue.splice(this.render_queue.indexOf(renderable), 1);
                 continue;
             }
             
-            renderable.render(context);
+            // If we're already rendering a singular renderable, don't render any more singular renderables
+            if (renderable.renderable.sequential && sequential_renderable_loaded) {
+                nqueue.push(renderable);
+                continue;
+            }
+
+            // If we're rendering a singular renderable, set the flag
+            if (renderable.renderable.sequential) {
+                sequential_renderable_loaded = true;
+            }
+            
+            renderable.renderable.render(context);
+            nqueue.push(renderable);
         }
+
+        this.render_queue = nqueue;
     }
 
     render (): void {
@@ -105,4 +140,4 @@ class RenderService {
 }
 
 
-export { RenderService, ChatEmote };
+export { RenderService };
