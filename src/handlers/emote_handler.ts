@@ -21,6 +21,7 @@ class EmoteHandler {
         if (tags.emotes) {
             for (const emote_id in tags.emotes) {
                 const emote = await this.emote_service.get_twitch_emote(emote_id);
+                const count = tags.emotes[emote_id].length;
 
                 if (!emote) {
                     continue;
@@ -32,14 +33,18 @@ class EmoteHandler {
                         lifetime: this.lifetime,
                     });
 
-                    emotes.push(emote_input);
+                    for (let i = 0; i < count; i++) {
+                        emotes.push(emote_input);
+                    }
                 } else {
                     const emote_input = new RenderableEmoteInput({
                         image: (emote as RawEmote).image,
                         lifetime: this.lifetime,
                     });
 
-                    emotes.push(emote_input);
+                    for (let i = 0; i < count; i++) {
+                        emotes.push(emote_input);
+                    }
                 }
             }
         }

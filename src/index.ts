@@ -23,6 +23,12 @@ async function main(): Promise<void> {
     const display = document.getElementById('display') as HTMLDivElement;
     const render_queue = new RenderQueue();
 
+    // get the lifetime of the emotes from query params
+    const url = new URL(window.location.href);
+    const lifetime = url.searchParams.get('lifetime');
+    const user_id = url.searchParams.get('user_id');
+    const lifetime_secs = lifetime ? parseInt(lifetime) : 3;
+
     // size the canvas to the window
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -36,8 +42,8 @@ async function main(): Promise<void> {
 
     const event_router = new EventRouter(render_queue);
     const emote_handler = new EmoteHandler(
-        '1', // user_id 
-        3, // lifetime_secs
+        user_id,
+        lifetime_secs,
     );
 
     // setup event router
@@ -65,3 +71,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
 /* Register the resize event */
 window.addEventListener('resize', resize_canvas, false);
+
+/* Register error handler */
+window.addEventListener('error', (e) => {
+    const body = document.getElementsByTagName('body')[0];
+    const error = document.createElement('div');
+    const message = document.createElement('p'); 
+
+    message.style.color = 'red';
+    message.style.fontSize = '2em';
+    message.innerText = e.message;
+
+    error.appendChild(message);
+    body.appendChild(error);
+});
