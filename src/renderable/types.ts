@@ -67,9 +67,7 @@ abstract class Renderable {
         this.position_x = opts.position_x;
         this.position_y = opts.position_y;
     }
-
-    cleanup (context: RenderContext): void { }
-
+    
     abstract render (context: RenderContext): void;
     static from_renderable_input (input: RenderableInput, context: RenderContext): Renderable {
         throw new Error('Not implemented');

@@ -50,8 +50,7 @@ class EmoteService {
         return emote;
     }
 
-    // TODO: Refactor this into "get_emote" which takes an id and returns emote | null
-    async get_twitch_emote (emote_id: string): Promise<BaseEmote> {
+    async get_twitch_emote (emote_id: string): Promise<BaseEmote | null> {
         if (this.cache.has(emote_id)) {
             return this.cache.get(emote_id);
         }

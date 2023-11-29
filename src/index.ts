@@ -1,4 +1,4 @@
-import { RenderService } from './renderable/render';
+import { RenderService } from './renderable';
 import { RenderQueue } from './renderable';
 import  ChatClient  from './chat';
 import { EmoteHandler } from './handlers';
@@ -31,7 +31,7 @@ async function main(): Promise<void> {
         canvas,
         audio,
         display,
-        render_queue,
+        queue: render_queue,
     });
 
     const event_router = new EventRouter(render_queue);
