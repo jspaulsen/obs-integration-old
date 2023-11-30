@@ -6,6 +6,9 @@ type ChatCallback = (channel: string, tags: tmi.ChatUserstate, message: string) 
 interface ChatOptions {
     channel: string;
     client_id?: string;
+    username? : string;
+    password?: string;
+
     callback: ChatCallback;
 }
 
@@ -23,7 +26,11 @@ class ChatClient {
             channels: [props.channel],
             options: {
                 clientId: props.client_id,
-            }
+            },
+            identity: {
+                username: props.username,
+                password: props.password,
+            },
         });
 
         this.client.on('message', (channel, tags, message) => this.callback(channel, tags, message));

@@ -13,11 +13,10 @@ class EmoteHandler {
 
     async on_handle_emote_event (channel: string, tags: any, message: string, queue: RenderQueue) {
         const emotes: RenderableInput[] = [];
-        
-        console.log(`[${channel}] ${tags['display-name']}: ${message}`);
 
         // TODO: Eventually we're going to want to check 7tv for emotes as well
         // for now, we'll just use the twitch emotes
+
         if (tags.emotes) {
             for (const emote_id in tags.emotes) {
                 const emote = await this.emote_service.get_twitch_emote(emote_id);
