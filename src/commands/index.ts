@@ -1,6 +1,5 @@
-import { ExampleCommand } from './example';
-
+import { DooDooCommand } from './doodoo';
 
 export {
-    ExampleCommand,
+    DooDooCommand,
 }

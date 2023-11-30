@@ -1,6 +1,5 @@
 import { Frame } from "../emotes";
-import { RenderQueue } from ".";
-import { RenderableInput, RenderableImageInput, RenderableAnimatedImageInput, RenderableEmoteInput, RenderableAnimatedEmoteInput } from './inputs';
+import RenderQueue from "./queue";
 
 
 interface RenderContext {
@@ -44,9 +43,6 @@ abstract class Renderable {
     sequential: boolean = true;
 
     abstract render (context: RenderContext): void;
-    static from_renderable_input (input: RenderableInput): Renderable {
-        throw new Error('Not implemented');
-    }
 }
 
 abstract class GraphicalRenderable extends Renderable {
@@ -68,19 +64,27 @@ abstract class PlayableRenderable extends Renderable {
 }
     
 
-abstract class AudioRenderable extends PlayableRenderable {
+class AudioRenderable extends PlayableRenderable {
     source: string;
 
     constructor (opts: RenderableAudioOptions) {
         super();
+
+        this.source = opts.source;
     }
 
     render (context: RenderContext): void {
+        // if it's already playing, don't play it again
+        if (context.audio.src === this.source) {
+            return;
+        }
+        
         context.audio.src = this.source;
         context.audio.play();
     }
 
     is_complete (context: RenderContext): boolean {
+        console.log(`is_complete: ${context.audio.ended}`)
         return context.audio.ended;
     }
 }
@@ -100,15 +104,6 @@ class ImageRenderable extends GraphicalRenderable {
             this.position_x,
             this.position_y,
         );
-    }
-
-    static from_renderable_input (input: RenderableImageInput): Renderable {
-        return new ImageRenderable({
-            image: input.image,
-            lifetime: input.lifetime,
-            position_x: input.position_x,
-            position_y: input.position_y,
-        });
     }
 }
 
@@ -167,15 +162,6 @@ class AnimatedImageRenderable extends GraphicalRenderable {
             this.position_y,
         );
     }
-
-    static from_renderable_input (input: RenderableAnimatedImageInput): Renderable {
-        return new AnimatedImageRenderable({
-            frames: input.frames,
-            lifetime: input.lifetime,
-            position_x: input.position_x,
-            position_y: input.position_y,
-        });
-    }
 }
 
 class EmoteRenderable extends GraphicalRenderable {
@@ -202,15 +188,6 @@ class EmoteRenderable extends GraphicalRenderable {
             this.position_y,
         );
     }
-
-    static from_renderable_input (input: RenderableEmoteInput): Renderable {
-        return new EmoteRenderable({
-            image: input.image,
-            lifetime: input.lifetime,
-            position_x: null,
-            position_y: null,
-        });
-    }
 }
 
 class AnimatedEmoteRenderable extends AnimatedImageRenderable {
@@ -228,32 +205,6 @@ class AnimatedEmoteRenderable extends AnimatedImageRenderable {
         this.width = opts.frames[0].frame_width;
         this.height = opts.frames[0].frame_height;
     }
-
-    static from_renderable_input (input: RenderableAnimatedEmoteInput): Renderable {
-        return new AnimatedEmoteRenderable({
-            frames: input.frames,
-            lifetime: input.lifetime,
-            position_x: null,
-            position_y: null,
-        });
-    }
-}
-
-
-function into_renderable(input: RenderableInput): Renderable {
-    let RenderableClass: typeof GraphicalRenderable | typeof PlayableRenderable = null;
-
-    if (input instanceof RenderableImageInput) {
-        RenderableClass = ImageRenderable;
-    } else if (input instanceof RenderableEmoteInput) {
-        RenderableClass = EmoteRenderable;
-    } else if (input instanceof RenderableAnimatedImageInput) {
-        RenderableClass = AnimatedImageRenderable;
-    } else if (input instanceof RenderableAnimatedEmoteInput) {
-        RenderableClass = AnimatedEmoteRenderable;
-    }
-    
-    return RenderableClass.from_renderable_input(input);
 }
 
 
@@ -365,7 +316,7 @@ class RenderService {
         const new_ephem = this
             .render_queue
             .get_items()
-            .map((input) => { return new EphemeralRenderable(into_renderable(input), now)});
+            .map((input) => { return new EphemeralRenderable(input, now); });
 
         this.work_queue.push(...new_ephem);
 
@@ -394,11 +345,14 @@ class RenderService {
             // if this is a sequential renderable and we already have one in the queue
             // then skip it, otherwise set it as the sequential renderable
             if (ephem.renderable.sequential && this.sequential_slot !== null) {
+                console.log('skipping sequential renderable')
                 continue;
             } else if (ephem.renderable.sequential) {
                 this.sequential_slot = ephem;
+                console.log('setting sequential renderable')
             }
 
+            console.log('rendering')
             ephem.renderable.render(context);
         }
     }
@@ -417,6 +371,10 @@ class RenderService {
 export {
     RenderService,
     EmoteRenderable,
+    AnimatedEmoteRenderable,
     ImageRenderable,
     AnimatedImageRenderable,
+    AudioRenderable,
+    GraphicalRenderable,
+    Renderable,
 }

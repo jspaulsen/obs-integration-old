@@ -3,7 +3,7 @@ import { RenderQueue } from './renderable';
 import  ChatClient  from './chat';
 import { EmoteHandler, CommandHandler } from './handlers';
 import { EventRouter, TwitchEvent } from './event_router';
-import { ExampleCommand } from './commands';
+import { DooDooCommand } from './commands';
 
 import './styles.css';
 
@@ -16,9 +16,6 @@ function resize_canvas(): void {
     canvas.width = width;
     canvas.height = height;
 }
-
-// First audio
-// https://www.youtube.com/watch?v=OMmgAS5dmhA&ab_channel=AdultSwim
 
 
 async function main(): Promise<void> {
@@ -52,7 +49,7 @@ async function main(): Promise<void> {
     );
 
     // register commands
-    command_handler.register_command(new ExampleCommand());
+    command_handler.register_command(new DooDooCommand());
 
     // setup event router
     event_router.register(
@@ -100,4 +97,6 @@ window.addEventListener('error', (e) => {
 
     error.appendChild(message);
     body.appendChild(error);
+
+    console.error(e);
 });

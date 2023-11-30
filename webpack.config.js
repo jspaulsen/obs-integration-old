@@ -13,6 +13,15 @@ module.exports = {
           test: /\.css$/i,
           use: ['style-loader', 'css-loader'],
       },
+      // mp3
+      {
+        test: /\.mp3$/,
+        loader: 'file-loader',
+        options: {
+          name: '[name].[ext]',
+          outputPath: 'assets/sounds/',
+        }
+      },
     ],
   },
   resolve: {

@@ -1,12 +1,14 @@
 import RenderQueue from './queue';
-import { RenderableInput, RenderableImageInput, RenderableEmoteInput, RenderableAnimatedEmoteInput } from './inputs';
-import { RenderService } from './render';
+import { AudioRenderable, Renderable, RenderService, AnimatedImageRenderable, GraphicalRenderable, ImageRenderable, EmoteRenderable, AnimatedEmoteRenderable } from './render';
 
-export { 
+export {
+    Renderable,
     RenderQueue,
-    RenderableInput,
-    RenderableImageInput,
-    RenderableEmoteInput,
-    RenderableAnimatedEmoteInput,
-    RenderService
+    RenderService,
+    AnimatedImageRenderable,
+    GraphicalRenderable,
+    ImageRenderable,
+    EmoteRenderable,
+    AnimatedEmoteRenderable,
+    AudioRenderable,
 }
