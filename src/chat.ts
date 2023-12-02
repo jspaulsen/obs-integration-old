@@ -26,6 +26,7 @@ class ChatClient {
             channels: [props.channel],
             options: {
                 clientId: props.client_id,
+                skipUpdatingEmotesets: true,
             },
             identity: {
                 username: props.username,

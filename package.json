@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "reload": "webpack serve --hot",
-    "build": "webpack --mode production"
+    "build": "webpack --mode production",
+    "serve": "http-server -a localhost -p 9000 dist"
   },
   "author": "",
   "license": "ISC",
@@ -23,6 +24,7 @@
     "@types/tmi.js": "^1.8.6",
     "file-loader": "^6.2.0",
     "gifuct-js": "^2.1.2",
+    "http-server": "^14.1.1",
     "style-loader": "^3.3.3",
     "tmi.js": "^1.8.5"
   }

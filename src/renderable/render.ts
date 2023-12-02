@@ -74,9 +74,6 @@ class AudioRenderable extends PlayableRenderable {
     }
 
     render (context: RenderContext): void {
-        console.log(context.audio);
-
-        // if it's already playing, don't play it again
         if (context.audio.src && context.audio.src === this.source) {
             return;
         }

@@ -11,48 +11,73 @@ class EmoteHandler {
         this.lifetime = lifetime_secs * 1000;
     }
 
+    async _get_twitch_emote (emote_id: string): Promise<Renderable | null> {
+        const emote = await this.emote_service.get_twitch_emote(emote_id);
+
+        if (!emote) {
+            return null;
+        }
+
+        if (emote.animated) {
+            return new AnimatedEmoteRenderable({
+                frames: (emote as AnimatedRawEmote).frames,
+                lifetime: this.lifetime,
+                position_x: null,
+                position_y: null,
+            });
+        } else {
+            return new EmoteRenderable({
+                image: (emote as RawEmote).image,
+                lifetime: this.lifetime,
+                position_x: null,
+                position_y: null,
+            });
+        }
+    }
+
+    async _get_7tv_emote (emote_id: string): Promise<Renderable | null> {
+        const emote = await this.emote_service.get_7tv_emote(emote_id);
+
+        if (!emote) {
+            return null;
+        }
+
+        return new EmoteRenderable({
+            image: emote.image,
+            lifetime: this.lifetime,
+            position_x: null,
+            position_y: null,
+        });
+    }
+
     async on_handle_emote_event (channel: string, tags: any, message: string, queue: RenderQueue) {
         const emotes: Renderable[] = [];
-        // TODO: Eventually we're going to want to check 7tv for emotes as well
-        // for now, we'll just use the twitch emotes
 
         if (tags.emotes) {
             for (const emote_id in tags.emotes) {
-                const emote = await this.emote_service.get_twitch_emote(emote_id);
+                const emote = await this._get_twitch_emote(emote_id);
                 const count = tags.emotes[emote_id].length;
-
+                
                 if (!emote) {
                     continue;
                 }
 
-                if (emote.animated) {
-                    const emote_input = new AnimatedEmoteRenderable({
-                        frames: (emote as AnimatedRawEmote).frames,
-                        lifetime: this.lifetime,
-                        position_x: null,
-                        position_y: null,
-                    });
-
-                    for (let i = 0; i < count; i++) {
-                        emotes.push(emote_input);
-                    }
-                } else {
-                    const emote_input = new EmoteRenderable({
-                        image: (emote as RawEmote).image,
-                        lifetime: this.lifetime,
-                        position_x: null,
-                        position_y: null,
-                    });
-
-                    for (let i = 0; i < count; i++) {
-                        emotes.push(emote_input);
-                    }
+                for (let i = 0; i < count; i++) {
+                    emotes.push(emote);
                 }
             }
         }
 
-        // TODO: Eventually we're going to want to check 7tv for emotes as well
-        // iterate through each word in the message and check for emotes
+        const words = message.split(' ');
+
+        for (const word of words) {
+            const emote = await this._get_7tv_emote(word);
+
+            if (emote) {
+                emotes.push(emote);
+            }
+        }
+
         queue.add_items(emotes);
     }    
 }

@@ -1,4 +1,5 @@
 import { parseGIF, decompressFrames } from 'gifuct-js'
+import { SevenTV, SevenTVEmote } from './7tv';
 
 
 interface BaseEmote {
@@ -26,10 +27,12 @@ interface AnimatedRawEmote extends BaseEmote {
 
 class EmoteService {
     cache: Map<string, BaseEmote> = new Map();
+    seven_tv: SevenTV;
     user_id: string;
 
     constructor(user_id: string) {
         this.user_id = user_id;
+        this.seven_tv = new SevenTV(user_id);
     }
 
     async _into_animated_emote (data: ArrayBuffer): Promise<AnimatedRawEmote> {
@@ -48,6 +51,22 @@ class EmoteService {
         };
 
         return emote;
+    }
+
+    async get_7tv_emote (emote_id: string): Promise<RawEmote | null> {
+        const emote = await this.seven_tv.get_emote(emote_id);
+        const image = new Image();
+
+        if (!emote) {
+            return null;
+        }
+        
+        image.src = emote.image_url;
+
+        return {
+            image,
+            animated: false,
+        };
     }
 
     async get_twitch_emote (emote_id: string): Promise<BaseEmote | null> {
