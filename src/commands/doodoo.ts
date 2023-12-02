@@ -1,6 +1,8 @@
 import { RenderQueue, AudioRenderable } from '../renderable';
 import { Permission, CooldownLevel } from '../handlers';
 
+import doodoo from '../../assets/doodoo.mp3';
+
 
 class DooDooCommand {
     cooldown_level: CooldownLevel = CooldownLevel.Global;
@@ -8,7 +10,7 @@ class DooDooCommand {
     permission: Permission = Permission.User;
 
     execute (username: string, message: string, queue: RenderQueue): boolean {
-        const audio = new AudioRenderable({source: '../public/doodoo.mp3'}); // ../public/
+        const audio = new AudioRenderable({source: doodoo});
 
         queue.add_items([audio]);
 
