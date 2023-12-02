@@ -74,18 +74,25 @@ class AudioRenderable extends PlayableRenderable {
     }
 
     render (context: RenderContext): void {
+        console.log(context.audio);
+
         // if it's already playing, don't play it again
-        if (context.audio.src === this.source) {
+        if (context.audio.src && context.audio.src === this.source) {
             return;
         }
-        
+
         context.audio.src = this.source;
         context.audio.play();
     }
 
     is_complete (context: RenderContext): boolean {
-        console.log(`is_complete: ${context.audio.ended}`)
-        return context.audio.ended;
+        if (context.audio && context.audio.ended) {
+            context.audio.src = '';
+
+            return true;
+        }
+
+        return false;
     }
 }
 
@@ -345,14 +352,11 @@ class RenderService {
             // if this is a sequential renderable and we already have one in the queue
             // then skip it, otherwise set it as the sequential renderable
             if (ephem.renderable.sequential && this.sequential_slot !== null) {
-                console.log('skipping sequential renderable')
                 continue;
             } else if (ephem.renderable.sequential) {
                 this.sequential_slot = ephem;
-                console.log('setting sequential renderable')
             }
 
-            console.log('rendering')
             ephem.renderable.render(context);
         }
     }

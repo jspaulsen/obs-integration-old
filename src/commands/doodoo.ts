@@ -8,7 +8,7 @@ class DooDooCommand {
     permission: Permission = Permission.User;
 
     execute (username: string, message: string, queue: RenderQueue): boolean {
-        const audio = new AudioRenderable({source: 'doodoo.mp3'});
+        const audio = new AudioRenderable({source: '../public/doodoo.mp3'}); // ../public/
 
         queue.add_items([audio]);
 
